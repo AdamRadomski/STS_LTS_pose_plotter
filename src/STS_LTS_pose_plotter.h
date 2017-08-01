@@ -8,7 +8,7 @@
 
 inline int64_t rosTimeToNanoseconds(const ros::Time& ros_time){
   static constexpr int64_t kSecondsToNanoseconds = 1e9;
-  return ros_time.sec*kSecondsToNanoseconds + ros_time.nsec;
+  return (int64_t)ros_time.sec*kSecondsToNanoseconds + (int64_t)ros_time.nsec;
 }
 
 class PosePlotter {
@@ -32,8 +32,14 @@ class PosePlotter {
 
   // Mutex protecting the buffers.
   std::mutex mutex_;
-  TimestampToPoseMap sts_timestamp_to_pose_map;
-  TimestampToPoseMap lts_timestamp_to_pose_map;
+
+  // Maps of timestamps and corresponding messages for both estimators.
+  TimestampToPoseMap sts_timestamp_to_pose_map_;
+  TimestampToPoseMap lts_timestamp_to_pose_map_;
+
+  // Set of all timestamps available in both estimators.
+  std::set<int64_t> available_timestamps_;
+  int64_t last_found_timestamp_idx_;
 
 };
 
