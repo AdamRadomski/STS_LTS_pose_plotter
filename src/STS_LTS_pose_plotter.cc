@@ -12,15 +12,38 @@ void PosePlotter::poseCallbackSTS(const geometry_msgs::PoseStamped& msg)
 {
   ++sts_msg_count_;
 
-  ROS_INFO("STS heard a pose. [%d]", sts_msg_count_);
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const int64_t timestamp = rosTimeToNanoseconds(msg.header.stamp);
+    sts_timestamp_to_pose_map.insert(std::make_pair(timestamp, msg));
 
+    // Check if none of timestamps was duplicated.
+    assert(sts_msg_count_ == sts_timestamp_to_pose_map.size());
+  }
+
+  // Calculate error between estimators.
+  calcErrorBetweenEstimators();
 }
 
 void PosePlotter::poseCallbackLTS(const geometry_msgs::PoseStamped& msg)
 {
   ++lts_msg_count_;
 
-  ROS_INFO("LTS heard a pose. [%d]", lts_msg_count_);
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const int64_t timestamp = rosTimeToNanoseconds(msg.header.stamp);
+    lts_timestamp_to_pose_map.insert(std::make_pair(timestamp, msg));
+
+    // Check if none of timestamps was duplicated.
+    assert(lts_msg_count_ == lts_timestamp_to_pose_map.size());
+  }
+
+
+  // Calculate error between estimators.
+  calcErrorBetweenEstimators();
+}
+
+void PosePlotter::calcErrorBetweenEstimators(){
 
 }
 
