@@ -50,6 +50,26 @@ void PosePlotter::poseCallbackLTS(const geometry_msgs::PoseStamped& msg)
   calcErrorBetweenEstimators();
 }
 
+void PosePlotter::poseCallbackSTSGlobal(const geometry_msgs::PoseStamped& msg)
+{
+  ++sts_msg_count_;
+
+  const int64_t timestamp = rosTimeToNanoseconds(msg.header.stamp);
+
+
+
+}
+
+void PosePlotter::poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg)
+{
+  ++lts_msg_count_;
+
+  const int64_t timestamp = rosTimeToNanoseconds(msg.header.stamp);
+
+
+
+}
+
 void PosePlotter::readTruePoses(const std::string& file_name){
   std::ifstream file;
   file.open(file_name);
@@ -129,14 +149,24 @@ int main(int argc, char **argv)
   std::cout << "*** pose plotter starts running ***" << std::endl;
   ros::init(argc, argv, "pose_plotter");
 
+  // Comment it out to calculate relative errors
+#define CALCULATE_GLOBAL_ERROR;
+
   // Prepare the plotter.
   PosePlotter plotter;
   plotter.readTruePoses("/home/radam/true_poses.txt");
 
   // Subscribe to nodes.
   ros::NodeHandle n;
-  ros::Subscriber sub_sts = n.subscribe("/fw_pose/sts", 1000, &PosePlotter::poseCallbackSTS, &plotter);
-  ros::Subscriber sub_lts = n.subscribe("/fw_pose/lts", 1000, &PosePlotter::poseCallbackLTS, &plotter);
+#ifdef CALCULATE_GLOBAL_ERROR
+    // Calculate global errors, separately for each smoother.
+  ros::Subscriber sub_sts = n.subscribe("/fw_pose/sts", 1000, &PosePlotter::poseCallbackSTSGlobal, &plotter);
+  ros::Subscriber sub_lts = n.subscribe("/fw_pose/lts", 1000, &PosePlotter::poseCallbackLTSGlobal, &plotter);
+#else
+    // Calculate errors between smoothers.
+    ros::Subscriber sub_sts = n.subscribe("/fw_pose/sts", 1000, &PosePlotter::poseCallbackSTS, &plotter);
+    ros::Subscriber sub_lts = n.subscribe("/fw_pose/lts", 1000, &PosePlotter::poseCallbackLTS, &plotter);
+#endif
 
   ros::spin();
 

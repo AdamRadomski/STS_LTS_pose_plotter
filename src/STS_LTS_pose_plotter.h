@@ -19,6 +19,9 @@ class PosePlotter {
   void poseCallbackSTS(const geometry_msgs::PoseStamped& msg);
   void poseCallbackLTS(const geometry_msgs::PoseStamped& msg);
 
+  void poseCallbackSTSGlobal(const geometry_msgs::PoseStamped& msg);
+  void poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg);
+
   void readTruePoses(const std::string& file_name);
 
  private:
