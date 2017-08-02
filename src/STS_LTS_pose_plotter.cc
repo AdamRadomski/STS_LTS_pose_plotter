@@ -1,5 +1,8 @@
 #include "STS_LTS_pose_plotter.h"
 
+#include <fstream>
+#include <string>
+
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 
@@ -43,9 +46,40 @@ void PosePlotter::poseCallbackLTS(const geometry_msgs::PoseStamped& msg)
     assert(lts_msg_count_ == lts_timestamp_to_pose_map_.size());
   }
 
-
   // Calculate error between estimators.
   calcErrorBetweenEstimators();
+}
+
+void PosePlotter::readTruePoses(const std::string& file_name){
+  std::ifstream file;
+  file.open(file_name);
+  assert(file);
+
+  std::string line;
+
+
+  while (getline( file, line ))
+  {
+    // Split the line on spacebars
+    std::stringstream test(line);
+    std::string segment;
+    std::vector<std::string> seglist;
+    while(std::getline(test, segment, ' '))
+    {
+       seglist.push_back(segment);
+    }
+    assert(seglist.size() == 4);
+
+    const int64_t timestamp = std::stoul(seglist[0]);
+    const double x = std::stod(seglist[1]);
+    const double y = std::stod(seglist[2]);
+    const double z = std::stod(seglist[3]);
+
+    // Insert the data to the map.
+    timestamp_to_true_pose_map_.insert(std::make_pair(timestamp,Eigen::Vector3d(x,y,z)));
+  }
+  file.close();
+  std::cout << "*** finished reading input file *** " << std::endl;
 }
 
 void PosePlotter::calcErrorBetweenEstimators(){
@@ -95,8 +129,11 @@ int main(int argc, char **argv)
   std::cout << "*** pose plotter starts running ***" << std::endl;
   ros::init(argc, argv, "pose_plotter");
 
-  // Subscribe to nodes.
+  // Prepare the plotter.
   PosePlotter plotter;
+  plotter.readTruePoses("/home/radam/true_poses.txt");
+
+  // Subscribe to nodes.
   ros::NodeHandle n;
   ros::Subscriber sub_sts = n.subscribe("/fw_pose/sts", 1000, &PosePlotter::poseCallbackSTS, &plotter);
   ros::Subscriber sub_lts = n.subscribe("/fw_pose/lts", 1000, &PosePlotter::poseCallbackLTS, &plotter);

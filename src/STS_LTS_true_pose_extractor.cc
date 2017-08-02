@@ -49,7 +49,7 @@ int main(int argc, char **argv)
             latlonalt(0), latlonalt(1), northing, easting, utm_zone);
         Eigen::Vector3d pos_utm(easting, northing, latlonalt(2));
 
-        file << std::setprecision(15) << timestamp << " " <<  pos_utm.transpose() << std::endl;
+        file << std::setprecision(15) << timestamp << " " <<  pos_utm(0)<< " " <<  pos_utm(1)<< " " <<  pos_utm(2)  << std::endl;
       }
   }
 
