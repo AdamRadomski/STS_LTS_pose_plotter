@@ -22,6 +22,8 @@ class PosePlotter {
   void poseCallbackSTSGlobal(const geometry_msgs::PoseStamped& msg);
   void poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg);
 
+
+  int64_t findClosestTrueTimestamp(const int64_t timestamp);
   void readTruePoses(const std::string& file_name);
 
  private:
@@ -43,5 +45,8 @@ class PosePlotter {
   // Set of all timestamps available in both estimators.
   std::set<int64_t> available_timestamps_;
   int64_t last_found_timestamp_idx_;
+
+  // Home position (offset).
+  Eigen::Vector3d offset_;
 
 };

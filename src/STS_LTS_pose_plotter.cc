@@ -12,6 +12,7 @@ PosePlotter::PosePlotter() {
   sts_msg_count_ = 0u;
   lts_msg_count_ = 0u;
   last_found_timestamp_idx_ = 0u;
+  offset_ = Eigen::Vector3d( 464980.0, 5.27226e+06, 414.087);
 }
 
 void PosePlotter::poseCallbackSTS(const geometry_msgs::PoseStamped& msg)
@@ -54,10 +55,16 @@ void PosePlotter::poseCallbackSTSGlobal(const geometry_msgs::PoseStamped& msg)
 {
   ++sts_msg_count_;
 
+
   const int64_t timestamp = rosTimeToNanoseconds(msg.header.stamp);
+  const int64_t closest_true_timestamp = findClosestTrueTimestamp(timestamp);
 
-
-
+  Eigen::Vector3d true_pos = timestamp_to_true_pose_map_[closest_true_timestamp]-offset_;
+  double x_err = msg.pose.position.x - true_pos(0);
+  double y_err = msg.pose.position.y - true_pos(1);
+  double z_err = msg.pose.position.z - true_pos(2);
+  double magn = sqrt(x_err*x_err + y_err*y_err + z_err*z_err);
+  ROS_INFO("Error of STS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
 }
 
 void PosePlotter::poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg)
@@ -65,9 +72,38 @@ void PosePlotter::poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg)
   ++lts_msg_count_;
 
   const int64_t timestamp = rosTimeToNanoseconds(msg.header.stamp);
+  const int64_t closest_true_timestamp = findClosestTrueTimestamp(timestamp);
+
+  Eigen::Vector3d true_pos = timestamp_to_true_pose_map_[closest_true_timestamp]-offset_;
+  double x_err = msg.pose.position.x - true_pos(0);
+  double y_err = msg.pose.position.y - true_pos(1);
+  double z_err = msg.pose.position.z - true_pos(2);
+  double magn = sqrt(x_err*x_err + y_err*y_err + z_err*z_err);
+  ROS_INFO("Error of LTS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
+}
+
+int64_t PosePlotter::findClosestTrueTimestamp(const int64_t timestamp){
+  int64_t closest_timestamp;
+
+  TimestampToTruePoseMap::iterator low, prev;
 
 
+  low = timestamp_to_true_pose_map_.lower_bound(timestamp);
+  if (low == timestamp_to_true_pose_map_.end()) {
+    // Big shit, not sure how to handle it yet.
+    assert(false);
 
+  } else if (low == timestamp_to_true_pose_map_.begin()) {
+      closest_timestamp = low->first;
+    } else {
+      prev = low;
+      --prev;
+      if ((timestamp - prev->first) < (low->first - timestamp))
+        closest_timestamp = prev->first;
+      else
+        closest_timestamp = low->first;
+  }
+  return closest_timestamp;
 }
 
 void PosePlotter::readTruePoses(const std::string& file_name){
@@ -150,7 +186,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "pose_plotter");
 
   // Comment it out to calculate relative errors
-#define CALCULATE_GLOBAL_ERROR;
+#define CALCULATE_GLOBAL_ERROR
 
   // Prepare the plotter.
   PosePlotter plotter;
