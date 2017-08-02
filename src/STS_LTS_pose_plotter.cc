@@ -1,10 +1,14 @@
 #include "STS_LTS_pose_plotter.h"
 
+
+#include <functional>
 #include <fstream>
+#include <numeric>
 #include <string>
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
+#include "std_msgs/Float64.h"
 
 #include "common.h"
 
@@ -13,6 +17,9 @@ PosePlotter::PosePlotter() {
   lts_msg_count_ = 0u;
   last_found_timestamp_idx_ = 0u;
   offset_ = Eigen::Vector3d( 464980.0, 5.27226e+06, 414.087);
+
+  publisher_sts_ = node_handle_.advertise<std_msgs::Float64>("/error/sts", 1);
+  publisher_lts_ = node_handle_.advertise<std_msgs::Float64>("/error/lts", 1);
 }
 
 void PosePlotter::poseCallbackSTS(const geometry_msgs::PoseStamped& msg)
@@ -59,12 +66,17 @@ void PosePlotter::poseCallbackSTSGlobal(const geometry_msgs::PoseStamped& msg)
   const int64_t timestamp = rosTimeToNanoseconds(msg.header.stamp);
   const int64_t closest_true_timestamp = findClosestTrueTimestamp(timestamp);
 
-  Eigen::Vector3d true_pos = timestamp_to_true_pose_map_[closest_true_timestamp]-offset_;
-  double x_err = msg.pose.position.x - true_pos(0);
-  double y_err = msg.pose.position.y - true_pos(1);
-  double z_err = msg.pose.position.z - true_pos(2);
-  double magn = sqrt(x_err*x_err + y_err*y_err + z_err*z_err);
-  ROS_INFO("Error of STS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
+  const Eigen::Vector3d true_pos = timestamp_to_true_pose_map_[closest_true_timestamp]-offset_;
+  const double x_err = msg.pose.position.x - true_pos(0);
+  const double y_err = msg.pose.position.y - true_pos(1);
+  const double z_err = msg.pose.position.z - true_pos(2);
+  const double magn = sqrt(x_err*x_err + y_err*y_err + z_err*z_err);
+  errors_sts_.push_back(magn);
+  //ROS_INFO("Error of STS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
+
+  std_msgs::Float64 error_msg;
+  error_msg.data = magn;
+  publisher_sts_.publish(error_msg);
 }
 
 void PosePlotter::poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg)
@@ -74,12 +86,25 @@ void PosePlotter::poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg)
   const int64_t timestamp = rosTimeToNanoseconds(msg.header.stamp);
   const int64_t closest_true_timestamp = findClosestTrueTimestamp(timestamp);
 
-  Eigen::Vector3d true_pos = timestamp_to_true_pose_map_[closest_true_timestamp]-offset_;
-  double x_err = msg.pose.position.x - true_pos(0);
-  double y_err = msg.pose.position.y - true_pos(1);
-  double z_err = msg.pose.position.z - true_pos(2);
-  double magn = sqrt(x_err*x_err + y_err*y_err + z_err*z_err);
+  const Eigen::Vector3d true_pos = timestamp_to_true_pose_map_[closest_true_timestamp]-offset_;
+  const double x_err = msg.pose.position.x - true_pos(0);
+  const double y_err = msg.pose.position.y - true_pos(1);
+  const double z_err = msg.pose.position.z - true_pos(2);
+  const double magn = sqrt(x_err*x_err + y_err*y_err + z_err*z_err);
+  errors_lts_.push_back(magn);
   ROS_INFO("Error of LTS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
+
+  std_msgs::Float64 error_msg;
+  error_msg.data = magn;
+  publisher_lts_.publish(error_msg);
+}
+
+void PosePlotter::printAverageErrors(){
+  // Print average errors for both estimators.
+  double average_error_sts = std::accumulate( errors_sts_.begin(), errors_sts_.end(), 0.0)/errors_sts_.size();
+  double average_error_lts = std::accumulate( errors_lts_.begin(), errors_lts_.end(), 0.0)/errors_lts_.size();
+
+  std::cout << "Average error for STS=" << average_error_sts << ", LTS=" <<average_error_lts << std::endl;
 }
 
 int64_t PosePlotter::findClosestTrueTimestamp(const int64_t timestamp){
@@ -90,7 +115,7 @@ int64_t PosePlotter::findClosestTrueTimestamp(const int64_t timestamp){
 
   low = timestamp_to_true_pose_map_.lower_bound(timestamp);
   if (low == timestamp_to_true_pose_map_.end()) {
-    // Big shit, not sure how to handle it yet.
+    // Problem here, not sure how to handle it yet.
     assert(false);
 
   } else if (low == timestamp_to_true_pose_map_.begin()) {
@@ -206,6 +231,7 @@ int main(int argc, char **argv)
 
   ros::spin();
 
+  plotter.printAverageErrors();
   std::cout << "*** pose plotter finished ***" << std::endl;
   return 0;
 }
