@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>STS_LTS_pose_plotter</name>
+  <name>sts_lts_pose_plotter</name>
   <version>0.0.0</version>
   <description>STS_LTS_pose_plotter</description>
   <maintainer email="noemailhere@qmail.com">radam</maintainer>

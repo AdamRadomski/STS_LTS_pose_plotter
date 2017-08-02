@@ -1,4 +1,4 @@
-#include "STS_LTS_pose_plotter.h"
+#include "sts_lts_pose_plotter.h"
 
 #include <Eigen/Dense>
 #include <fstream>
