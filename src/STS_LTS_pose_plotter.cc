@@ -3,6 +3,8 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 
+#include "common.h"
+
 PosePlotter::PosePlotter() {
   sts_msg_count_ = 0u;
   lts_msg_count_ = 0u;

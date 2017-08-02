@@ -10,6 +10,7 @@
 #include <sensor_msgs/NavSatFix.h>
 #include "std_msgs/String.h"
 
+#include "common.h"
 
 int main(int argc, char **argv)
 {
@@ -37,7 +38,7 @@ int main(int argc, char **argv)
       const sensor_msgs::NavSatFix::Ptr msg_ptr = message.instantiate<sensor_msgs::NavSatFix>();
       if (msg_ptr != NULL) {
         sensor_msgs::NavSatFix meas = *msg_ptr;
-
+        int64_t timestamp = rosTimeToNanoseconds(meas.header.stamp);
 
         double northing, easting;
         char utm_zone[10];
@@ -48,7 +49,7 @@ int main(int argc, char **argv)
             latlonalt(0), latlonalt(1), northing, easting, utm_zone);
         Eigen::Vector3d pos_utm(easting, northing, latlonalt(2));
 
-        file << std::setprecision(15) <<  pos_utm.transpose() << std::endl;
+        file << std::setprecision(15) << timestamp << " " <<  pos_utm.transpose() << std::endl;
       }
   }
 
