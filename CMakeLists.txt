@@ -19,3 +19,6 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 add_executable(pose_plotter src/STS_LTS_pose_plotter.cc)
 target_link_libraries(pose_plotter ${catkin_LIBRARIES})
+
+add_executable(true_pose_extractor src/STS_LTS_true_pose_extractor.cc)
+target_link_libraries(true_pose_extractor ${catkin_LIBRARIES})
