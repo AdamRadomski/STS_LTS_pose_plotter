@@ -8,7 +8,7 @@
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
-#include "std_msgs/Float64.h"
+
 
 #include "common.h"
 
@@ -18,8 +18,8 @@ PosePlotter::PosePlotter() {
   last_found_timestamp_idx_ = 0u;
   offset_ = Eigen::Vector3d( 464980.0, 5.27226e+06, 414.087);
 
-  publisher_sts_ = node_handle_.advertise<std_msgs::Float64>("/error/sts", 1);
-  publisher_lts_ = node_handle_.advertise<std_msgs::Float64>("/error/lts", 1);
+  publisher_sts_ = node_handle_.advertise<geometry_msgs::PoseStamped>("/error/sts", 1);
+  publisher_lts_ = node_handle_.advertise<geometry_msgs::PoseStamped>("/error/lts", 1);
 }
 
 void PosePlotter::poseCallbackSTS(const geometry_msgs::PoseStamped& msg)
@@ -74,8 +74,10 @@ void PosePlotter::poseCallbackSTSGlobal(const geometry_msgs::PoseStamped& msg)
   errors_sts_.push_back(magn);
   //ROS_INFO("Error of STS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
 
-  std_msgs::Float64 error_msg;
-  error_msg.data = magn;
+  geometry_msgs::PoseStamped error_msg;
+  static constexpr int64_t kSecondToNanosecond = 1e9;
+  error_msg.header.stamp = ros::Time(timestamp / kSecondToNanosecond, timestamp % kSecondToNanosecond);
+  error_msg.pose.position.x = magn;
   publisher_sts_.publish(error_msg);
 }
 
@@ -94,8 +96,10 @@ void PosePlotter::poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg)
   errors_lts_.push_back(magn);
   ROS_INFO("Error of LTS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
 
-  std_msgs::Float64 error_msg;
-  error_msg.data = magn;
+  geometry_msgs::PoseStamped error_msg;
+  static constexpr int64_t kSecondToNanosecond = 1e9;
+  error_msg.header.stamp = ros::Time(timestamp / kSecondToNanosecond, timestamp % kSecondToNanosecond);
+  error_msg.pose.position.x = magn;
   publisher_lts_.publish(error_msg);
 }
 
@@ -111,7 +115,6 @@ int64_t PosePlotter::findClosestTrueTimestamp(const int64_t timestamp){
   int64_t closest_timestamp;
 
   TimestampToTruePoseMap::iterator low, prev;
-
 
   low = timestamp_to_true_pose_map_.lower_bound(timestamp);
   if (low == timestamp_to_true_pose_map_.end()) {
