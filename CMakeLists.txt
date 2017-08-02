@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 2.8.3)
 project(STS_LTS_pose_plotter)
 
 ## Find catkin and any catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs genmsg)
+#find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs genmsg rosbag)
+find_package(catkin_simple REQUIRED)
+catkin_simple(ALL_DEPS_REQUIRED)
 
 ## Declare ROS messages and services
 #add_message_files(FILES Num.msg)
