@@ -5,6 +5,7 @@
 
 #include <Eigen/Dense>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Vector3Stamped.h>
 
 #include "ros/node_handle.h"
 #include "ros/publisher.h"
@@ -14,7 +15,7 @@ class PosePlotter {
  public:
 
   typedef std::map<int64_t,geometry_msgs::PoseStamped> TimestampToPoseMap;
-  typedef std::map<int64_t, Eigen::Vector3d> TimestampToTruePoseMap;
+  typedef std::map<int64_t, Eigen::MatrixXd> TimestampToTruePoseMap;
 
   PosePlotter();
 

@@ -1,14 +1,13 @@
 #include "sts_lts_pose_plotter.h"
 
-
 #include <functional>
 #include <fstream>
 #include <numeric>
 #include <string>
 
+#include <gps_common/conversions.h>
 #include "ros/ros.h"
 #include "std_msgs/String.h"
-
 
 #include "common.h"
 
@@ -66,10 +65,20 @@ void PosePlotter::poseCallbackSTSGlobal(const geometry_msgs::PoseStamped& msg)
   const int64_t timestamp = rosTimeToNanoseconds(msg.header.stamp);
   const int64_t closest_true_timestamp = findClosestTrueTimestamp(timestamp);
 
-  const Eigen::Vector3d true_pos = timestamp_to_true_pose_map_[closest_true_timestamp]-offset_;
-  const double x_err = msg.pose.position.x - true_pos(0);
-  const double y_err = msg.pose.position.y - true_pos(1);
-  const double z_err = msg.pose.position.z - true_pos(2);
+  int64_t diff = closest_true_timestamp - timestamp;
+  if (diff > 0 ){
+    if (diff > 50000000)
+      return;
+  }
+  else {
+    if (diff < -50000000)
+      return;
+  }
+
+  const Eigen::MatrixXd true_pos = timestamp_to_true_pose_map_[closest_true_timestamp]-offset_;
+  const double x_err = msg.pose.position.x - true_pos(0,0);
+  const double y_err = msg.pose.position.y - true_pos(1,0);
+  const double z_err = msg.pose.position.z - true_pos(2,0);
   const double magn = sqrt(x_err*x_err + y_err*y_err + z_err*z_err);
   errors_sts_.push_back(magn);
   //ROS_INFO("Error of STS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
@@ -88,10 +97,20 @@ void PosePlotter::poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg)
   const int64_t timestamp = rosTimeToNanoseconds(msg.header.stamp);
   const int64_t closest_true_timestamp = findClosestTrueTimestamp(timestamp);
 
-  const Eigen::Vector3d true_pos = timestamp_to_true_pose_map_[closest_true_timestamp]-offset_;
-  const double x_err = msg.pose.position.x - true_pos(0);
-  const double y_err = msg.pose.position.y - true_pos(1);
-  const double z_err = msg.pose.position.z - true_pos(2);
+  int64_t diff = closest_true_timestamp - timestamp;
+  if (diff > 0 ){
+    if (diff > 50000000)
+      return;
+  }
+  else {
+    if (diff < -50000000)
+      return;
+  }
+
+  const Eigen::MatrixXd true_pos = timestamp_to_true_pose_map_[closest_true_timestamp]-offset_;
+  const double x_err = msg.pose.position.x - true_pos(0,0);
+  const double y_err = msg.pose.position.y - true_pos(1,0);
+  const double z_err = msg.pose.position.z - true_pos(2,0);
   const double magn = sqrt(x_err*x_err + y_err*y_err + z_err*z_err);
   errors_lts_.push_back(magn);
   ROS_INFO("Error of LTS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
@@ -140,27 +159,45 @@ void PosePlotter::readTruePoses(const std::string& file_name){
   assert(file);
 
   std::string line;
-
-
   while (getline( file, line ))
   {
     // Split the line on spacebars
     std::stringstream test(line);
     std::string segment;
     std::vector<std::string> seglist;
-    while(std::getline(test, segment, ' '))
+    while(std::getline(test, segment, '\t'))
     {
        seglist.push_back(segment);
     }
-    assert(seglist.size() == 4);
+    assert(seglist.size() == 7);
+
+    if (seglist.size() == 0 ){
+      break;
+    }
 
     const int64_t timestamp = std::stoul(seglist[0]);
-    const double x = std::stod(seglist[1]);
-    const double y = std::stod(seglist[2]);
-    const double z = std::stod(seglist[3]);
+    const double lon = std::stod(seglist[1]);
+    const double lat = std::stod(seglist[2]);
+    const double alt = std::stod(seglist[3]);
+    const double yaw = std::stod(seglist[4]);
+    const double pitch = std::stod(seglist[5]);
+    const double roll = std::stod(seglist[6]);
+
+    double northing, easting;
+    char utm_zone[10];
+    const Eigen::Vector3d& latlonalt = Eigen::Vector3d(
+        lat, lon,alt);
+
+    gps_common::LLtoUTM(
+        latlonalt(0), latlonalt(1), northing, easting, utm_zone);
+    Eigen::Vector3d pos_utm(easting, northing, latlonalt(2));
 
     // Insert the data to the map.
-    timestamp_to_true_pose_map_.insert(std::make_pair(timestamp,Eigen::Vector3d(x,y,z)));
+    Eigen::MatrixXd matrix;
+    matrix.resize(6,1);
+    matrix << pos_utm(0), pos_utm(1), pos_utm(2), yaw, pitch, roll;
+    timestamp_to_true_pose_map_.insert(std::make_pair(timestamp,matrix));
+    //std::cout << std::setprecision(15) <<  pos_utm(0) << " " <<  pos_utm(1)<< " " <<  pos_utm(2)<< " " <<  yaw<< " " <<  pitch<< " " <<  roll << std::endl;
   }
   file.close();
   std::cout << "*** finished reading input file *** " << std::endl;
@@ -218,7 +255,7 @@ int main(int argc, char **argv)
 
   // Prepare the plotter.
   PosePlotter plotter;
-  plotter.readTruePoses("/home/radam/true_poses.txt");
+  plotter.readTruePoses("/home/radam/true poses/true_poses_pix4d.txt");
 
   // Subscribe to nodes.
   ros::NodeHandle n;
