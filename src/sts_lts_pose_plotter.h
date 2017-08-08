@@ -29,6 +29,7 @@ class PosePlotter {
   void printAverageErrors();
 
   int64_t findClosestTrueTimestamp(const int64_t timestamp);
+  Eigen::MatrixXd interpolateGroundTruth(const int64_t timestamp);
   void readTruePoses(const std::string& file_name);
 
  private:

@@ -61,21 +61,9 @@ void PosePlotter::poseCallbackSTSGlobal(const geometry_msgs::PoseStamped& msg)
 {
   ++sts_msg_count_;
 
-
   const int64_t timestamp = rosTimeToNanoseconds(msg.header.stamp);
-  const int64_t closest_true_timestamp = findClosestTrueTimestamp(timestamp);
 
-  int64_t diff = closest_true_timestamp - timestamp;
-  if (diff > 0 ){
-    if (diff > 50000000)
-      return;
-  }
-  else {
-    if (diff < -50000000)
-      return;
-  }
-
-  const Eigen::MatrixXd true_pos = timestamp_to_true_pose_map_[closest_true_timestamp]-offset_;
+  const Eigen::MatrixXd true_pos = interpolateGroundTruth(timestamp) - offset_;
   const double x_err = msg.pose.position.x - true_pos(0,0);
   const double y_err = msg.pose.position.y - true_pos(1,0);
   const double z_err = msg.pose.position.z - true_pos(2,0);
@@ -95,25 +83,14 @@ void PosePlotter::poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg)
   ++lts_msg_count_;
 
   const int64_t timestamp = rosTimeToNanoseconds(msg.header.stamp);
-  const int64_t closest_true_timestamp = findClosestTrueTimestamp(timestamp);
 
-  int64_t diff = closest_true_timestamp - timestamp;
-  if (diff > 0 ){
-    if (diff > 50000000)
-      return;
-  }
-  else {
-    if (diff < -50000000)
-      return;
-  }
-
-  const Eigen::MatrixXd true_pos = timestamp_to_true_pose_map_[closest_true_timestamp]-offset_;
+  const Eigen::MatrixXd true_pos = interpolateGroundTruth(timestamp) - offset_;
   const double x_err = msg.pose.position.x - true_pos(0,0);
   const double y_err = msg.pose.position.y - true_pos(1,0);
   const double z_err = msg.pose.position.z - true_pos(2,0);
   const double magn = sqrt(x_err*x_err + y_err*y_err + z_err*z_err);
   errors_lts_.push_back(magn);
-  ROS_INFO("Error of LTS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
+  //ROS_INFO("Error of LTS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
 
   geometry_msgs::PoseStamped error_msg;
   static constexpr int64_t kSecondToNanosecond = 1e9;
@@ -151,6 +128,34 @@ int64_t PosePlotter::findClosestTrueTimestamp(const int64_t timestamp){
         closest_timestamp = low->first;
   }
   return closest_timestamp;
+}
+
+Eigen::MatrixXd PosePlotter::interpolateGroundTruth(const int64_t timestamp){
+  // Find timestamps before and after the given timestamp.
+  TimestampToTruePoseMap::iterator prev, next;
+  next = timestamp_to_true_pose_map_.lower_bound(timestamp);
+  prev = next;
+  prev--;
+
+  if (next == timestamp_to_true_pose_map_.end() ) {
+    // Problem here, not sure how to handle it yet.
+    assert(false);
+  }
+  else if (next->first == timestamp){
+    // Exactly at the timestamp.
+    std::cout << "return 1 " <<prev->first << " " << timestamp << " " <<next->first << std::endl;
+    return next->second;
+  }
+  else {
+    const Eigen::MatrixXd& prev_mat = prev->second;
+    const Eigen::MatrixXd& next_mat = next->second;
+    const int64_t& prev_timestamp = prev->first;
+    const int64_t& next_timestamp = next->first;
+
+    Eigen::MatrixXd a = (next_mat - prev_mat)/((double)(next_timestamp - prev_timestamp));
+    Eigen::MatrixXd b = prev_mat - a*prev_timestamp;
+    return a*timestamp + b;
+  }
 }
 
 void PosePlotter::readTruePoses(const std::string& file_name){
