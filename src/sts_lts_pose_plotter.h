@@ -6,6 +6,7 @@
 #include <Eigen/Dense>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
+#include <geometry_msgs/TransformStamped.h>
 
 #include "ros/node_handle.h"
 #include "ros/publisher.h"
@@ -53,7 +54,8 @@ class PosePlotter {
 
   // Publishers for errors for both smoothers.
   ros::NodeHandle node_handle_;
-  ros::Publisher publisher_sts_, publisher_lts_;
+  ros::Publisher publisher_pose_error_sts_, publisher_pose_error_lts_;
+  ros::Publisher publisher_orientation_error_sts_, publisher_orientation_error_lts_;
 
   // Set of all timestamps available in both estimators.
   std::set<int64_t> available_timestamps_;

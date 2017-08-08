@@ -17,8 +17,10 @@ PosePlotter::PosePlotter() {
   last_found_timestamp_idx_ = 0u;
   offset_ = Eigen::Vector3d( 464980.0, 5.27226e+06, 414.087);
 
-  publisher_sts_ = node_handle_.advertise<geometry_msgs::PoseStamped>("/error/sts", 1);
-  publisher_lts_ = node_handle_.advertise<geometry_msgs::PoseStamped>("/error/lts", 1);
+  publisher_pose_error_sts_ = node_handle_.advertise<geometry_msgs::Vector3Stamped>("/error/pose/sts", 1);
+  publisher_pose_error_lts_ = node_handle_.advertise<geometry_msgs::Vector3Stamped>("/error/pose/lts", 1);
+  publisher_orientation_error_sts_ = node_handle_.advertise<geometry_msgs::Vector3Stamped>("/error/orientation/sts", 1);
+  publisher_orientation_error_lts_ = node_handle_.advertise<geometry_msgs::Vector3Stamped>("/error/orientation/lts", 1);
 }
 
 void PosePlotter::poseCallbackSTS(const geometry_msgs::PoseStamped& msg)
@@ -71,11 +73,13 @@ void PosePlotter::poseCallbackSTSGlobal(const geometry_msgs::PoseStamped& msg)
   errors_sts_.push_back(magn);
   //ROS_INFO("Error of STS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
 
-  geometry_msgs::PoseStamped error_msg;
+  geometry_msgs::Vector3Stamped error_msg;
   static constexpr int64_t kSecondToNanosecond = 1e9;
   error_msg.header.stamp = ros::Time(timestamp / kSecondToNanosecond, timestamp % kSecondToNanosecond);
-  error_msg.pose.position.x = magn;
-  publisher_sts_.publish(error_msg);
+  error_msg.vector.x = x_err;
+  error_msg.vector.y = y_err;
+  error_msg.vector.z = z_err;
+  publisher_pose_error_sts_.publish(error_msg);
 }
 
 void PosePlotter::poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg)
@@ -92,11 +96,13 @@ void PosePlotter::poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg)
   errors_lts_.push_back(magn);
   //ROS_INFO("Error of LTS position: x=%f, y=%f, z=%f, magnitude=%f",x_err,y_err,z_err,magn);
 
-  geometry_msgs::PoseStamped error_msg;
+  geometry_msgs::Vector3Stamped error_msg;
   static constexpr int64_t kSecondToNanosecond = 1e9;
   error_msg.header.stamp = ros::Time(timestamp / kSecondToNanosecond, timestamp % kSecondToNanosecond);
-  error_msg.pose.position.x = magn;
-  publisher_lts_.publish(error_msg);
+  error_msg.vector.x = x_err;
+  error_msg.vector.y = y_err;
+  error_msg.vector.z = z_err;
+  publisher_pose_error_lts_.publish(error_msg);
 }
 
 void PosePlotter::printAverageErrors(){
