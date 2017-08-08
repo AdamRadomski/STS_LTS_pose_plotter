@@ -1,5 +1,3 @@
-#include "sts_lts_pose_plotter.h"
-
 #include <Eigen/Dense>
 #include <fstream>
 
