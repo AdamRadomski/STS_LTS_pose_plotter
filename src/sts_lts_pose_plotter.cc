@@ -21,6 +21,8 @@ PosePlotter::PosePlotter() {
   publisher_pose_error_lts_ = node_handle_.advertise<geometry_msgs::Vector3Stamped>("/error/pose/lts", 1);
   publisher_orientation_error_sts_ = node_handle_.advertise<geometry_msgs::Vector3Stamped>("/error/orientation/sts", 1);
   publisher_orientation_error_lts_ = node_handle_.advertise<geometry_msgs::Vector3Stamped>("/error/orientation/lts", 1);
+  publisher_pose_error_magnitude_sts_ = node_handle_.advertise<geometry_msgs::Vector3Stamped>("/error/magnitude/sts", 1);
+  publisher_pose_error_magnitude_lts_ = node_handle_.advertise<geometry_msgs::Vector3Stamped>("/error/magnitude/lts", 1);
 }
 
 void PosePlotter::poseCallbackSTS(const geometry_msgs::PoseStamped& msg)
@@ -75,11 +77,19 @@ void PosePlotter::poseCallbackSTSGlobal(const geometry_msgs::PoseStamped& msg)
 
   geometry_msgs::Vector3Stamped error_msg;
   static constexpr int64_t kSecondToNanosecond = 1e9;
-  error_msg.header.stamp = ros::Time(timestamp / kSecondToNanosecond, timestamp % kSecondToNanosecond);
+  ros::Time ros_time(timestamp / kSecondToNanosecond, timestamp % kSecondToNanosecond);
+  error_msg.header.stamp = ros_time;
   error_msg.vector.x = x_err;
   error_msg.vector.y = y_err;
   error_msg.vector.z = z_err;
   publisher_pose_error_sts_.publish(error_msg);
+
+  geometry_msgs::Vector3Stamped error_magnitude_msg;
+  error_magnitude_msg.header.stamp = ros_time;
+  error_magnitude_msg.vector.x = magn;
+  publisher_pose_error_magnitude_sts_.publish(error_magnitude_msg);
+
+  // TODO(AdamRadomski): publish orientation errors.
 }
 
 void PosePlotter::poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg)
@@ -98,11 +108,19 @@ void PosePlotter::poseCallbackLTSGlobal(const geometry_msgs::PoseStamped& msg)
 
   geometry_msgs::Vector3Stamped error_msg;
   static constexpr int64_t kSecondToNanosecond = 1e9;
-  error_msg.header.stamp = ros::Time(timestamp / kSecondToNanosecond, timestamp % kSecondToNanosecond);
+  ros::Time ros_time(timestamp / kSecondToNanosecond, timestamp % kSecondToNanosecond);
+  error_msg.header.stamp = ros_time;
   error_msg.vector.x = x_err;
   error_msg.vector.y = y_err;
   error_msg.vector.z = z_err;
   publisher_pose_error_lts_.publish(error_msg);
+
+  geometry_msgs::Vector3Stamped error_magnitude_msg;
+  error_magnitude_msg.header.stamp = ros_time;
+  error_magnitude_msg.vector.x = magn;
+  publisher_pose_error_magnitude_lts_.publish(error_magnitude_msg);
+
+  // TODO(AdamRadomski): publish orientation errors.
 }
 
 void PosePlotter::printAverageErrors(){

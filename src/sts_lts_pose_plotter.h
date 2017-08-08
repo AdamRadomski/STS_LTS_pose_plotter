@@ -56,6 +56,7 @@ class PosePlotter {
   ros::NodeHandle node_handle_;
   ros::Publisher publisher_pose_error_sts_, publisher_pose_error_lts_;
   ros::Publisher publisher_orientation_error_sts_, publisher_orientation_error_lts_;
+  ros::Publisher publisher_pose_error_magnitude_sts_, publisher_pose_error_magnitude_lts_;
 
   // Set of all timestamps available in both estimators.
   std::set<int64_t> available_timestamps_;
